@@ -1,0 +1,151 @@
+---
+title: "Activity Monitoring"
+author: "Anirudha Mohanty"
+date: "January 19, 2018"
+output:
+  html_document: default 
+---
+
+ 
+    Q1) Code for reading in the dataset and/or processing the data
+    #Solution:
+        a. Set working directory
+        b. Download the file
+        c. Unzip the file
+        d. Analyse the file by using Summary,Str,head commands
+
+```{r }
+
+setwd("C:\\Coursera_Data\\Course5\\Course5_Week1\\Course5_Week1_Assignment")
+
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile="data.zip")
+unzip (zipfile = "data.zip")
+
+
+activityDs <- read.csv("activity.csv",header = TRUE)
+activityDs$date <- as.Date(activityDs$date)
+summary(activityDs)
+str(activityDs)
+head(activityDs)
+```
+
+    Q2.Histogram of the total number of steps taken each day
+        #Solution:
+            a) Find total number of steps taken on each day by using aggregate function.
+            b)Remove the missing value from the above aggregate
+            c)Use ggplot to plot the steps taken each day
+        
+
+```{r echo=TRUE}
+library(ggplot2)
+
+aggrStepsByDate <-aggregate(steps ~ date, activityDs, sum, na.rm = TRUE , na.action = na.omit)
+
+
+ggplot(aggrStepsByDate, aes(x = steps))  + geom_histogram(fill = "blue", binwidth = 1000) +xlab("Number of Steps per Day")  +ylab("Number of times in a day(Count)")  + ggtitle("Total number of steps taken per day")  +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+``` 
+
+    Q3.Mean and median number of steps taken each day 
+        #Solution:
+            *Use Mean & Median function
+```{r}
+mean(aggrStepsByDate$steps, na.rm=TRUE)
+
+median(aggrStepsByDate$steps, na.rm=TRUE)
+
+```
+
+
+    Q4.Time series plot of the average number of steps taken
+        #Solution:
+            a) Find average number of steps taken on each inetrval (across all days) by using aggregate function.
+            b)Remove the missing value from the above aggregate
+            c)Use ggplot to plot the steps taken each day  
+```{r echo=TRUE}
+aggrStepsByInterval <-aggregate(steps ~ interval, activityDs, mean,na.rm = TRUE , na.action = na.omit)
+
+ggplot(aggrStepsByInterval, aes(interval, steps)) + geom_line(color="blue") +labs(title="Average Daily Activity Pattern", x="Interval", y="Average steps")  +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+    Q5.The 5-minute interval that, on average, contains the maximum number of steps.
+        #Solution:
+            a) Find average number of steps taken on each inetrval (across all days) by using aggregate function and assign it to a variable.
+            b)Remove the missing value from the above aggregate
+            c)Find the maximum value by using which.ax function
+        
+```{r echo=TRUE}
+
+mostSteps <- aggrStepsByInterval[which.max(aggrStepsByInterval$steps), ]
+
+mostSteps
+```
+
+    Q6.Code to describe and show a strategy for imputing missing data
+        #Solution:
+            a)Calculate and report the total number of missing values in the dataset     (i.e. the total number of rows with NAs)
+```{r}
+missingNAN<- is.na(activityDs$steps)
+totalMissing <- sum(as.numeric(missingNAN))
+totalMissing
+```
+    
+            b) Create new variable "steps_impute" .Fill missing values in  steps_impute with average steps taken during the same interval (across days). 
+            c) use str function to see the structure of dataset.
+```{r}
+    for (i in 1:length(activityDs$steps)){
+        if (is.na(activityDs$steps[i] == TRUE)){
+           activityDs$steps_impute[i] <- aggrStepsByInterval$steps[match(activityDs$interval[i], aggrStepsByInterval$interval)]
+            
+        } else {
+            activityDs$steps_impute[i] <- activityDs$steps[i]
+        }
+    }        
+str(activityDs)
+
+``` 
+
+    Q7.Histogram of the total number of steps taken each day after missing values are imputed
+        #Solution:
+            a)Make a histogram of the total number of steps taken each day by using ggplot function. 
+            
+```{r echo=TRUE}
+
+aggrImpStepsByDate <-aggregate(steps_impute ~ date, activityDs, sum)
+
+str(aggrImpStepsByDate)
+
+ggplot(aggrImpStepsByDate, aes(x=steps_impute))  + geom_histogram(fill = "green", binwidth =1000 ) +xlab("Number of (Imputed)Steps")  +ylab("Number of times in a day")  + ggtitle("Steps taken per day")  +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+            
+            b)Use mean/median function to calculate mean and median of total number of steps taken per day
+   
+
+```{r}
+mean(aggrStepsByDate$steps)
+
+median(aggrStepsByDate$steps)
+
+```
+
+    Q8)Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+    #Solution:
+        a) Create "day" variable in the dataset using weekday function
+        b) Use conditional operator to get Weekday/Weekend flag
+        c) Aggregate total steps taken for all the interval during weekday and weekend
+        d) Use ggplot function to show steps taken during each interval
+        facet_wrap annotation can be use to split the graph based on weekday and weekend
+        
+```{r}
+ activityDs$day <- weekdays(activityDs$date,abbreviate = TRUE)    
+    activityDs$weekdayFlag <- ifelse(activityDs$day == "Sun","Weekend",ifelse(activityDs$day == "Sat","Weekend","Weekday"))
+    aggrStepWeekdayInt <- aggregate(steps_impute ~ interval +weekdayFlag , activityDs, sum)
+    
+    ggplot(aggrStepWeekdayInt, aes(interval,steps_impute)) + geom_line(color="blue")+ facet_wrap(~weekdayFlag, nrow = 2,ncol = 1) +labs(x="Interval", y="Number of steps") 
+    
+```
